@@ -142,7 +142,9 @@ final class MovieQuizViewController: UIViewController {
             message: "Ваш результат: \(correctAnswers) из \(questions.count)\nТочность: \(averagePercentage)% \nВремя: \(formattedDate)",
             preferredStyle: .alert)
         
-        let action = UIAlertAction(title: buttonTitle, style: .default) { _ in
+        let action = UIAlertAction(title: buttonTitle, style: .default) { [weak self] _ in
+            guard let self = self else {return}
+            
             self.currentQuestionIndex = 0
             self.correctAnswers = 0 // Здесь обнуляем correctAnswers перед переходом на новый раунд
             self.enableButtons(true) //включаю кнопки на след. раунд
@@ -165,7 +167,6 @@ struct QuizQuestion { //преобразование данных из стру�
     let text: String
     let correctAnswer: Bool
 }
-
 struct QuizStepViewModel { // вью модель для состояния "Вопрос показан"
     let image: UIImage
     let question: String
