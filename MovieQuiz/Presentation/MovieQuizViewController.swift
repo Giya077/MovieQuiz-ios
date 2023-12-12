@@ -58,7 +58,6 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         }
         showAnswerResult(isCorrect: true)}
     
-    //private methods
     // приватный метод вывода на экран вопроса, который принимает на вход вью модель вопроса и ничего не возвращает
     private func show(quiz step: QuizStepViewModel) {
         imageView.image = step.image
@@ -82,7 +81,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
             // идём в состояние Результат квиза
             showQuizResultsAlert(buttonTitle: "Сыграть ещё раз")
         } else {
-            questionFactory?.requestNextQuestion()
+            self.questionFactory?.requestNextQuestion()
                 enableButtons(true) //включаю кнопку
         }
     }
@@ -140,8 +139,9 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
             self.currentQuestionIndex = 0
             self.correctAnswers = 0 // Здесь обнуляем correctAnswers перед переходом на новый раунд
             self.enableButtons(true) //включаю кнопки на след. раунд
-            questionFactory?.requestNextQuestion()
+            self.questionFactory?.requestNextQuestion()
         }
+        
         alert.addAction(action)
         self.present(alert, animated: true, completion: nil)
     }
