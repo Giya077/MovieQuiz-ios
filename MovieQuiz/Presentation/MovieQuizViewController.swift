@@ -9,9 +9,8 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     private var isProcessinqQuestion = false //флаг по обработке след. вопроса для блок. и разблк. кнопки
     
     private let questionsAmount: Int = 10
-    private var questionFactory: QuestionFactoryProtocol = QuestionFactory()
+    private var questionFactory: QuestionFactoryProtocol?
     private var currentQuestion: QuizQuestion?
-    
     //outlets
     @IBOutlet weak private var imageView: UIImageView!
     @IBOutlet weak private var questionTextLabel: UILabel!
@@ -26,18 +25,21 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         imageView.layer.borderColor = UIColor.clear.cgColor
         imageView.layer.cornerRadius = 20
         
-        if let firstQuestion = self.questionFactory.requestNextQuestion() {
-            self.currentQuestion = firstQuestion
-            let viewModel = self.convert(model: firstQuestion)
-            self.show(quiz: viewModel)
-        }
-        showNextQuestionOrResults()
+        questionFactory = QuestionFactory(delegate: self)
+        questionFactory?.requestNextQuestion()
+//        showNextQuestionOrResults()
     }
     // MARK: - QuestionFactoryDelegate
     func didReceiveNextQuestion(question: QuizQuestion?) {
-        <#code#>
+        guard let question = question else {
+            return
+        }
+        currentQuestion = question
+        let viewModel = convert(model: question)
+        DispatchQueue.main.async { [weak self] in
+            self?.show(quiz: viewModel)
+        }
     }
-    
     
     override var preferredStatusBarStyle: UIStatusBarStyle{
         return .lightContent //меняем цвет status bara,  так же в info добавил ключ
@@ -80,12 +82,8 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
             // идём в состояние Результат квиза
             showQuizResultsAlert(buttonTitle: "Сыграть ещё раз")
         } else {
-            if let nextQuestion = questionFactory.requestNextQuestion() {
-                currentQuestion = nextQuestion
-                let viewModel = convert(model: nextQuestion)
-                show(quiz: viewModel)
+            questionFactory?.requestNextQuestion()
                 enableButtons(true) //включаю кнопку
-            }
         }
     }
     
@@ -139,16 +137,10 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         
         let action = UIAlertAction(title: buttonTitle, style: .default) { [weak self] _ in
             guard let self = self else {return}
-            
             self.currentQuestionIndex = 0
             self.correctAnswers = 0 // Здесь обнуляем correctAnswers перед переходом на новый раунд
             self.enableButtons(true) //включаю кнопки на след. раунд
-            if let firstQuestion = questionFactory.requestNextQuestion() {
-                currentQuestion = firstQuestion
-                // заново показываем первый вопрос
-                let viewModel = self.convert(model: firstQuestion) // заново показываем первый вопрос
-                self.show(quiz: viewModel) // заново показываем первый вопрос // мб self не надо!!!!!
-            }
+            questionFactory?.requestNextQuestion()
         }
         alert.addAction(action)
         self.present(alert, animated: true, completion: nil)
