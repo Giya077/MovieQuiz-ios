@@ -11,6 +11,8 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     private let questionsAmount: Int = 10
     private var questionFactory: QuestionFactoryProtocol?
     private var currentQuestion: QuizQuestion?
+    private var alertPresenter: AlertPresenter? // alert injection
+    
     //outlets
     @IBOutlet weak private var imageView: UIImageView!
     @IBOutlet weak private var questionTextLabel: UILabel!
@@ -25,6 +27,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         imageView.layer.borderColor = UIColor.clear.cgColor
         imageView.layer.cornerRadius = 20
         
+        alertPresenter = AlertPresenter(presentingViewController: self)
         questionFactory = QuestionFactory(delegate: self)
         questionFactory?.requestNextQuestion()
 //        showNextQuestionOrResults()
@@ -79,12 +82,13 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         
         if currentQuestionIndex == questionsAmount {
             // идём в состояние Результат квиза
-            showQuizResultsAlert(buttonTitle: "Сыграть ещё раз")
+            alertResults()
         } else {
             self.questionFactory?.requestNextQuestion()
                 enableButtons(true) //включаю кнопку
         }
     }
+    
     
     // приватный метод, который меняет цвет рамки
     private func showAnswerResult(isCorrect: Bool) {
@@ -97,6 +101,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         guard let currentQuestion = currentQuestion else {
             return
         } 
+        
         let isCorrect = isCorrect == currentQuestion.correctAnswer
         
         if isCorrect {
@@ -116,35 +121,55 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         }
     }
     
-    private func showQuizResultsAlert(buttonTitle: String) {
-        let currentDate = Date() // текущая дата и время
-        let dateFormatter = DateFormatter() // форматтер для преобразования даты в строку
-        dateFormatter.dateFormat = "dd.MM.yyyy HH:mm:ss"
-        let formattedDate = dateFormatter.string(from: currentDate) // преобразуем текущую дату в строку
-        
-        var averagePercentage: Int //средний процент правильных ответов
-        if questionsAmount > 0 {
-            averagePercentage = correctAnswers * 100 / questionsAmount //count полюбому надо
-        } else {
-            averagePercentage = 0
-        }
-        
-        let alert = UIAlertController(
+//    private func showQuizResultsAlert(buttonTitle: String) {
+//        let currentDate = Date() // текущая дата и время
+//        let dateFormatter = DateFormatter() // форматтер для преобразования даты в строку
+//        dateFormatter.dateFormat = "dd.MM.yyyy HH:mm:ss"
+//        let formattedDate = dateFormatter.string(from: currentDate) // преобразуем текущую дату в строку
+//        
+//        var averagePercentage: Int //средний процент правильных ответов
+//        if questionsAmount > 0 {
+//            averagePercentage = correctAnswers * 100 / questionsAmount //count полюбому надо
+//        } else {
+//            averagePercentage = 0
+//        }
+//        
+//        let alert = UIAlertController(
+//            title: "Этот раунд окончен!",
+//            message: "Ваш результат: \(correctAnswers) из \(questionsAmount)\nТочность: \(averagePercentage)% \nВремя: \(formattedDate)",
+//            preferredStyle: .alert)
+//        
+//        let action = UIAlertAction(title: buttonTitle, style: .default) { [weak self] _ in
+//            guard let self = self else {return}
+//            self.currentQuestionIndex = 0
+//            self.correctAnswers = 0 // Здесь обнуляем correctAnswers перед переходом на новый раунд
+//            self.enableButtons(true) //включаю кнопки на след. раунд
+//            self.questionFactory?.requestNextQuestion()
+//        }
+//        
+//        alert.addAction(action)
+//        self.present(alert, animated: true, completion: nil)
+//    }
+    
+    private func alertResults() {
+        let alertModel = AlertModel(
             title: "Этот раунд окончен!",
-            message: "Ваш результат: \(correctAnswers) из \(questionsAmount)\nТочность: \(averagePercentage)% \nВремя: \(formattedDate)",
-            preferredStyle: .alert)
-        
-        let action = UIAlertAction(title: buttonTitle, style: .default) { [weak self] _ in
-            guard let self = self else {return}
-            self.currentQuestionIndex = 0
-            self.correctAnswers = 0 // Здесь обнуляем correctAnswers перед переходом на новый раунд
-            self.enableButtons(true) //включаю кнопки на след. раунд
-            self.questionFactory?.requestNextQuestion()
-        }
-        
-        alert.addAction(action)
-        self.present(alert, animated: true, completion: nil)
+            message: "Ваш результат:\(correctAnswers) из",
+            buttonText: "Сыграть ещё раз",
+            competion: { [weak self] in // замыкания на кнопку рестарт
+                self?.restartRound()
+            }
+        )
+        alertPresenter?.presentAlert(model: alertModel)
     }
+        
+    func restartRound() {
+            currentQuestionIndex = 0
+            correctAnswers = 0
+            enableButtons(true)
+            questionFactory?.requestNextQuestion()
+        }
+    
     
     private func enableButtons(_ enable: Bool) { //метод вкл,откл кнопок
         noButton.isEnabled = enable
