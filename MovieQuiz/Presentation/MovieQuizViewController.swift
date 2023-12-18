@@ -2,11 +2,14 @@ import UIKit
 
 final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     
+    private var statisticService: StatisticService = StatisticServiceImplementation() // Экземпляр для работы с данными и статистикой
+    
     //Properties
     private var currentQuestionIndex = 0
     private var correctAnswers = 0
     
     private var isProcessinqQuestion = false //флаг по обработке след. вопроса для блок. и разблк. кнопки
+    
     
     private let questionsAmount: Int = 10
     private var questionFactory: QuestionFactoryProtocol?
@@ -30,7 +33,6 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         alertPresenter = AlertPresenter(presentingViewController: self)
         questionFactory = QuestionFactory(delegate: self)
         questionFactory?.requestNextQuestion()
-//        showNextQuestionOrResults()
     }
     // MARK: - QuestionFactoryDelegate
     func didReceiveNextQuestion(question: QuizQuestion?) {
@@ -61,7 +63,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         }
         showAnswerResult(isCorrect: true)}
     
-    // приватный метод вывода на экран вопроса, который принимает на вход вью модель вопроса и ничего не возвращает
+    // метод вывода на экран вопроса, который принимает на вход вью модель вопроса и ничего не возвращает
     private func show(quiz step: QuizStepViewModel) {
         imageView.image = step.image
         questionTextLabel.text = step.question
@@ -82,7 +84,8 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         
         if currentQuestionIndex == questionsAmount {
             // идём в состояние Результат квиза
-            alertResults()
+            statisticService.store(correct: correctAnswers, total: questionsAmount) //вызываем статистику
+            alertResults(correctAnswers: correctAnswers, questionAmount: questionsAmount)
         } else {
             self.questionFactory?.requestNextQuestion()
                 enableButtons(true) //включаю кнопку
@@ -111,7 +114,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
             imageView.layer.borderColor = UIColor.ypRed.cgColor
         }
         currentQuestionIndex += 1
-        print("кол-во правильных ответов \(correctAnswers)") //понимаю что логика работает
+        print("кол-во правильных ответов \(correctAnswers)")
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in //добавил задержку
             guard let self = self else { return }
@@ -120,41 +123,20 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
             self.isProcessinqQuestion = false // возращаю кнопку в исходное значение
         }
     }
-    
-//    private func showQuizResultsAlert(buttonTitle: String) {
-//        let currentDate = Date() // текущая дата и время
-//        let dateFormatter = DateFormatter() // форматтер для преобразования даты в строку
-//        dateFormatter.dateFormat = "dd.MM.yyyy HH:mm:ss"
-//        let formattedDate = dateFormatter.string(from: currentDate) // преобразуем текущую дату в строку
-//        
-//        var averagePercentage: Int //средний процент правильных ответов
-//        if questionsAmount > 0 {
-//            averagePercentage = correctAnswers * 100 / questionsAmount //count полюбому надо
-//        } else {
-//            averagePercentage = 0
-//        }
-//        
-//        let alert = UIAlertController(
-//            title: "Этот раунд окончен!",
-//            message: "Ваш результат: \(correctAnswers) из \(questionsAmount)\nТочность: \(averagePercentage)% \nВремя: \(formattedDate)",
-//            preferredStyle: .alert)
-//        
-//        let action = UIAlertAction(title: buttonTitle, style: .default) { [weak self] _ in
-//            guard let self = self else {return}
-//            self.currentQuestionIndex = 0
-//            self.correctAnswers = 0 // Здесь обнуляем correctAnswers перед переходом на новый раунд
-//            self.enableButtons(true) //включаю кнопки на след. раунд
-//            self.questionFactory?.requestNextQuestion()
-//        }
-//        
-//        alert.addAction(action)
-//        self.present(alert, animated: true, completion: nil)
-//    }
-    
-    private func alertResults() {
+        
+    private func alertResults(correctAnswers: Int, questionAmount: Int) {
+        let averageAccurancyString = String(format: "%.2f", statisticService.totalAccuracy)
+        let bestGame = statisticService.bestGame
+        let message = """
+            Ваш результат: \(correctAnswers) из \(questionsAmount)
+            Количество завершённых игр: \(statisticService.gamesCount)
+            Рекорд: \(bestGame.correct) из \(bestGame.total)
+            Средняя точность: \(averageAccurancyString)%
+            """
+        
         let alertModel = AlertModel(
             title: "Этот раунд окончен!",
-            message: "Ваш результат:\(correctAnswers) из",
+            message: message,
             buttonText: "Сыграть ещё раз",
             competion: { [weak self] in // замыкания на кнопку рестарт
                 self?.restartRound()
@@ -164,6 +146,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     }
         
     func restartRound() {
+//            statisticService.store(correct: correctAnswers, total: questionsAmount)
             currentQuestionIndex = 0
             correctAnswers = 0
             enableButtons(true)
