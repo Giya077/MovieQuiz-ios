@@ -128,9 +128,9 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         let averageAccurancyString = String(format: "%.2f", statisticService.totalAccuracy)
         let bestGame = statisticService.bestGame
         let message = """
-            Ваш результат: \(correctAnswers) из \(questionsAmount)
+            Ваш результат: \(correctAnswers)/\(questionsAmount)
             Количество завершённых игр: \(statisticService.gamesCount)
-            Рекорд: \(bestGame.correct) из \(bestGame.total)
+            Рекорд: \(bestGame.correct)/\(bestGame.total) \((bestGame.date.dateTimeString))
             Средняя точность: \(averageAccurancyString)%
             """
         
