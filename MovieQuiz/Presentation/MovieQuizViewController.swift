@@ -22,6 +22,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     @IBOutlet weak private var counterLabel: UILabel!
     @IBOutlet weak private var noButton: UIButton!
     @IBOutlet weak private var yesButton: UIButton!
+    @IBOutlet weak var activityIndicator: UIActivityIndicatorView!
     
     // MARK: - Lifecycle
     override func viewDidLoad() {
@@ -31,8 +32,12 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         imageView.layer.cornerRadius = 20
         
         alertPresenter = AlertPresenter(presentingViewController: self)
-        questionFactory = QuestionFactory(delegate: self)
-        questionFactory?.requestNextQuestion()
+        
+        questionFactory = QuestionFactory(moviesLoader: MoviesLoader(), delegate: self)
+        statisticService = StatisticServiceImplementation()
+        
+        showLoadingIndicator()
+        questionFactory?.loadData()
     }
     // MARK: - QuestionFactoryDelegate
     func didReceiveNextQuestion(question: QuizQuestion?) {
@@ -52,10 +57,11 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     
     //actions
     @IBAction private func noButtonClicked(_ sender: UIButton) {
-            guard currentQuestion != nil else {
+        guard currentQuestion != nil else {
             return
         }
-        showAnswerResult(isCorrect: false)}
+        showAnswerResult(isCorrect: false)
+    }
     
     @IBAction private func yesButtonClicked(_ sender: UIButton) {
         guard currentQuestion != nil else {
@@ -72,11 +78,10 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     
     // приватный метод конвертации, который принимает моковый вопрос и возвращает вью модель для главного экрана
     private func convert(model: QuizQuestion) -> QuizStepViewModel {
-        let questionStep = QuizStepViewModel(
-            image: UIImage(named: model.image) ?? UIImage(),//Инициализирую картинку с помощью конструктора UIImage(named: )
+        return QuizStepViewModel(
+            image: UIImage(data: model.image) ?? UIImage(),//Инициализирую картинку с помощью конструктора UIImage(named: )
             question: model.text, //забираем уже готовый вопрос из мокового вопроса
             questionNumber: "\(currentQuestionIndex + 1)/\(questionsAmount)") //Высчитываем номер вопроса с помощью переменной текущего вопроса currentQuestionIndex
-        return questionStep
     }
     
     private func showNextQuestionOrResults() {
@@ -88,7 +93,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
             alertResults(correctAnswers: correctAnswers, questionAmount: questionsAmount)
         } else {
             self.questionFactory?.requestNextQuestion()
-                enableButtons(true) //включаю кнопку
+            enableButtons(true) //включаю кнопку
         }
     }
     
@@ -103,7 +108,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         
         guard let currentQuestion = currentQuestion else {
             return
-        } 
+        }
         
         let isCorrect = isCorrect == currentQuestion.correctAnswer
         
@@ -123,7 +128,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
             self.isProcessinqQuestion = false // возращаю кнопку в исходное значение
         }
     }
-        
+    
     private func alertResults(correctAnswers: Int, questionAmount: Int) {
         let averageAccurancyString = String(format: "%.2f", statisticService.totalAccuracy)
         let bestGame = statisticService.bestGame
@@ -144,19 +149,55 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         )
         alertPresenter?.presentAlert(model: alertModel)
     }
-        
+    
     func restartRound() {
-//            statisticService.store(correct: correctAnswers, total: questionsAmount)
-            currentQuestionIndex = 0
-            correctAnswers = 0
-            enableButtons(true)
-            questionFactory?.requestNextQuestion()
-        }
+        //            statisticService.store(correct: correctAnswers, total: questionsAmount)
+        currentQuestionIndex = 0
+        correctAnswers = 0
+        enableButtons(true)
+        questionFactory?.requestNextQuestion()
+    }
     
     
     private func enableButtons(_ enable: Bool) { //метод вкл,откл кнопок
         noButton.isEnabled = enable
         yesButton.isEnabled = enable
+    }
+    
+    private func showLoadingIndicator() {
+        activityIndicator.isHidden = false // говорим, что индикатор загрузки не скрыт
+        activityIndicator.startAnimating() // включаем анимацию
+    }
+    
+    private func hideLoadingIndicator() {
+        activityIndicator.isHidden = true
+        activityIndicator.stopAnimating()
+    }
+    
+    private func showNetworkError(message: String) {
+        hideLoadingIndicator()
+        
+        let model = AlertModel(
+            title: "Ошибка",
+            message: message,
+            buttonText: "Попробовать еще раз") { [weak self] in
+                guard let self = self else {return}
+                
+                self.currentQuestionIndex = 0
+                self.correctAnswers = 0
+                
+                self.questionFactory?.requestNextQuestion()
+        }
+        alertPresenter?.presentAlert(model: model)
+    }
+    
+    func didLoadDataFromServer() {
+        activityIndicator.isHidden = true // скрываем индикатор загрузки
+        questionFactory?.requestNextQuestion()
+    }
+    
+    func didFailToLoadData(with error: Error) {
+        showNetworkError(message: error.localizedDescription) // возьмём в качестве сообщения описание ошибки
     }
 }
 

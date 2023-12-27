@@ -8,7 +8,7 @@
 import Foundation
 
 struct QuizQuestion { //преобразование данных из структуры вопроса QuizQuestion во вью модель для экрана QuizStepViewModel.
-    let image: String
+    let image: Data
     let text: String
     let correctAnswer: Bool
 }

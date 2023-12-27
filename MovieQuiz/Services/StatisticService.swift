@@ -15,8 +15,6 @@ protocol StatisticService {
     func store(correct count: Int, total amount: Int)
 }
 
-
-
 struct GameRecord: Codable {
     let correct: Int
     let total: Int
