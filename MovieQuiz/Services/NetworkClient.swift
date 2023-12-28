@@ -13,6 +13,8 @@ struct NetworkClient {
     private enum NetworkError: Error {
         case codeError
     }
+    weak var delegate: QuestionFactoryDelegate?
+    
     
     func fetch(url: URL, handler: @escaping (Result<Data, Error>) -> Void) { //успех data, ошибка error
         let request = URLRequest(url: url) // создаём запрос из url
@@ -20,6 +22,7 @@ struct NetworkClient {
         let task = URLSession.shared.dataTask(with: request) { data, response, error in
             // Проверяем, пришла ли ошибка
             if let error = error {
+                self.delegate?.didFailToLoadData(with: error)
                 handler(.failure(error))
                 return
             }
@@ -27,6 +30,7 @@ struct NetworkClient {
             // Проверяем, что нам пришёл успешный код ответа
             if let response = response as? HTTPURLResponse, /*URLResponse — это базовый тип ответа на все сетевые протоколы*/
                 response.statusCode < 200 || response.statusCode >= 300 {
+                self.delegate?.didFailToLoadData(with: NetworkError.codeError)
                 handler(.failure(NetworkError.codeError))
                 return
             }

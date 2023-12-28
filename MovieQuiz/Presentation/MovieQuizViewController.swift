@@ -2,14 +2,12 @@ import UIKit
 
 final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     
-    private var statisticService: StatisticService = StatisticServiceImplementation() // Экземпляр для работы с данными и статистикой
-    
     //Properties
     private var currentQuestionIndex = 0
     private var correctAnswers = 0
+    private var statisticService: StatisticService = StatisticServiceImplementation() // Экземпляр для работы с данными и статистикой
     
     private var isProcessinqQuestion = false //флаг по обработке след. вопроса для блок. и разблк. кнопки
-    
     
     private let questionsAmount: Int = 10
     private var questionFactory: QuestionFactoryProtocol?
@@ -150,7 +148,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         alertPresenter?.presentAlert(model: alertModel)
     }
     
-    func restartRound() {
+   private func restartRound() {
         //            statisticService.store(correct: correctAnswers, total: questionsAmount)
         currentQuestionIndex = 0
         correctAnswers = 0
@@ -170,25 +168,26 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     }
     
     private func hideLoadingIndicator() {
-        activityIndicator.isHidden = true
+        activityIndicator.isHidden = true // скрываем индикатор загрузки
         activityIndicator.stopAnimating()
     }
     
     private func showNetworkError(message: String) {
         hideLoadingIndicator()
         
-        let model = AlertModel(
+        let modelError = AlertModel(
             title: "Ошибка",
-            message: message,
+            message: "Невозможно загрузить данные",
             buttonText: "Попробовать еще раз") { [weak self] in
                 guard let self = self else {return}
                 
                 self.currentQuestionIndex = 0
                 self.correctAnswers = 0
                 
-                self.questionFactory?.requestNextQuestion()
+                self.showLoadingIndicator() // включаю анимацию
+                self.questionFactory?.loadData() //кидаю новый запрос при востановлении сети
         }
-        alertPresenter?.presentAlert(model: model)
+        alertPresenter?.presentAlert(model: modelError)
     }
     
     func didLoadDataFromServer() {
@@ -199,6 +198,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     func didFailToLoadData(with error: Error) {
         showNetworkError(message: error.localizedDescription) // возьмём в качестве сообщения описание ошибки
     }
+    
 }
 
 
