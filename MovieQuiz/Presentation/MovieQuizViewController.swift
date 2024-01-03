@@ -1,5 +1,6 @@
 import UIKit
 
+
 final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     
     //Properties
@@ -14,6 +15,8 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     private var currentQuestion: QuizQuestion?
     private var alertPresenter: AlertPresenter? // alert injection
     
+    private var errorManager = ErrorManager()
+    
     //outlets
     @IBOutlet weak private var imageView: UIImageView!
     @IBOutlet weak private var questionTextLabel: UILabel!
@@ -21,6 +24,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     @IBOutlet weak private var noButton: UIButton!
     @IBOutlet weak private var yesButton: UIButton!
     @IBOutlet weak var activityIndicator: UIActivityIndicatorView!
+    
     
     // MARK: - Lifecycle
     override func viewDidLoad() {
@@ -35,7 +39,12 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         statisticService = StatisticServiceImplementation()
         
         showLoadingIndicator()
+        activityIndicator.hidesWhenStopped = true
+        
         questionFactory?.loadData()
+        
+        errorManager.showNetworkError = { [weak self] message in
+            self?.showNetworkError(message: message)}
     }
     // MARK: - QuestionFactoryDelegate
     func didReceiveNextQuestion(question: QuizQuestion?) {
@@ -90,6 +99,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
             statisticService.store(correct: correctAnswers, total: questionsAmount) //вызываем статистику
             alertResults(correctAnswers: correctAnswers, questionAmount: questionsAmount)
         } else {
+//            showLoadingIndicator() 
             self.questionFactory?.requestNextQuestion()
             enableButtons(true) //включаю кнопку
         }
@@ -149,7 +159,6 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     }
     
    private func restartRound() {
-        //            statisticService.store(correct: correctAnswers, total: questionsAmount)
         currentQuestionIndex = 0
         correctAnswers = 0
         enableButtons(true)
@@ -163,14 +172,12 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     }
     
     private func showLoadingIndicator() {
-        activityIndicator.isHidden = false // говорим, что индикатор загрузки не скрыт
-        activityIndicator.startAnimating() // включаем анимацию
+        activityIndicator.startAnimating()
     }
     
     private func hideLoadingIndicator() {
-        activityIndicator.isHidden = true // скрываем индикатор загрузки
         activityIndicator.stopAnimating()
-    }
+     }
     
     private func showNetworkError(message: String) {
         hideLoadingIndicator()
@@ -184,21 +191,32 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
                 self.currentQuestionIndex = 0
                 self.correctAnswers = 0
                 
-                self.showLoadingIndicator() // включаю анимацию
+//                DispatchQueue.main.async {
+//                    self.currentQuestion = nil
+//                    self.imageView.image = nil
+//                    self.questionTextLabel.text = ""
+//                    self.counterLabel.text = ""
+//                }
+                
+                showLoadingIndicator()
                 self.questionFactory?.loadData() //кидаю новый запрос при востановлении сети
         }
         alertPresenter?.presentAlert(model: modelError)
     }
     
     func didLoadDataFromServer() {
-        activityIndicator.isHidden = true // скрываем индикатор загрузки
+        hideLoadingIndicator()
         questionFactory?.requestNextQuestion()
     }
     
     func didFailToLoadData(with error: Error) {
-        showNetworkError(message: error.localizedDescription) // возьмём в качестве сообщения описание ошибки
+        if let apiError = error as? ApiError {
+            errorManager.handleApiError(apiError)
+        } else {
+            showNetworkError(message: error.localizedDescription)
+        }
+        hideLoadingIndicator()
     }
-    
 }
 
 

@@ -5,7 +5,7 @@
 //  Created by GiyaDev on 11.12.2023.
 //
 
-import Foundation
+import UIKit
 
 class QuestionFactory: QuestionFactoryProtocol {
     //    private let questions: [QuizQuestion] = [
@@ -72,28 +72,31 @@ class QuestionFactory: QuestionFactoryProtocol {
             
             guard let movie = self.movies[safe: index] else  { return }
             
-            var imageData = Data() /* по умолчанию будут пустые данные*/
+            //            var imageData = Data() /* по умолчанию будут пустые данные*/
             
             do {
-                imageData = try Data(contentsOf: movie.resizedImageURL)
+                let imageData = try Data(contentsOf: movie.resizedImageURL)
+                
+                let rating = Float(movie.rating) ?? 0 // превращаем строку в число
+                let text = "Рейтинг этого фильма больше чем 7?"
+                let correctAnswer = rating > 7
+                
+                let question = QuizQuestion( //Создаём вопрос, определяем его корректность и создаём модель вопроса
+                    image: imageData,
+                    text: text,
+                    correctAnswer: correctAnswer)
+                
+                DispatchQueue.main.async { [weak self] in //когда загрузка и обработка данных завершена, пора вернуться в главный поток main
+                    guard let self = self else { return }
+                    self.delegate?.didReceiveNextQuestion(question: question)
+                }
             } catch {
-                print("Failed to load image")
-            }
-            
-            let rating = Float(movie.rating) ?? 0 // превращаем строку в число
-            
-            let text = "Рейтинг этого фильма больше чем 7?"
-            
-            let correctAnswer = rating > 7
-            
-            let question = QuizQuestion( //Создаём вопрос, определяем его корректность и создаём модель вопроса
-                image: imageData,
-                text: text,
-                correctAnswer: correctAnswer)
-            
-            DispatchQueue.main.async { [weak self] in //когда загрузка и обработка данных завершена, пора вернуться в главный поток main
-                guard let self = self else { return }
-                self.delegate?.didReceiveNextQuestion(question: question)
+                // Ошибка загрузки изображения
+                DispatchQueue.main.async { [weak self] in
+                    guard let self = self else { return }
+                    let errorMessage = "Failed to load data: \(error.localizedDescription)"
+                    self.delegate?.didFailToLoadData(with: NSError(domain: "com.yourapp", code: 1, userInfo: [NSLocalizedDescriptionKey: errorMessage]))
+                }
             }
         }
     }
