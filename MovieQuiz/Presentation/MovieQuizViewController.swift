@@ -34,6 +34,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         imageView.layer.cornerRadius = 20
         
         alertPresenter = AlertPresenter(presentingViewController: self)
+
         
         questionFactory = QuestionFactory(moviesLoader: MoviesLoader(), delegate: self)
         statisticService = StatisticServiceImplementation()
@@ -123,11 +124,12 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         if isCorrect {
             correctAnswers += 1
             imageView.layer.borderColor = UIColor.ypGreen.cgColor
+            print("ответ верный, количество правильных ответов: \(correctAnswers) из \(questionsAmount)")
         } else {
             imageView.layer.borderColor = UIColor.ypRed.cgColor
+            print("ответ не верный, количество правильных ответов: \(correctAnswers) из \(questionsAmount)")
         }
         currentQuestionIndex += 1
-        print("кол-во правильных ответов \(correctAnswers)")
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in //добавил задержку
             guard let self = self else { return }
@@ -155,7 +157,9 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
                 self?.restartRound()
             }
         )
-        alertPresenter?.presentAlert(model: alertModel)
+        let alertPresenter = AlertPresenter(presentingViewController: self, alertIdentifier: "Game Results")
+        alertPresenter.presentAlert(model: alertModel)
+        
     }
     
    private func restartRound() {

@@ -9,9 +9,11 @@ import UIKit
 
 class AlertPresenter {
     weak var presentingViewController: UIViewController?
+    var alertIdentifier: String? // переменная для идентификатора
     
-    init(presentingViewController: UIViewController? = nil) {
+    init(presentingViewController: UIViewController? = nil, alertIdentifier: String? = nil) {
         self.presentingViewController = presentingViewController
+        self.alertIdentifier = alertIdentifier
     }
     
     func presentAlert(model: AlertModel) {
@@ -24,7 +26,10 @@ class AlertPresenter {
             model.competion()
         }
         alertController.addAction(action)
+        
         presentingViewController?.present(alertController, animated: true, completion: nil)
+            alertController.view.accessibilityIdentifier = self.alertIdentifier
+        
     }
 
 }
