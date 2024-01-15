@@ -39,7 +39,6 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         statisticService = StatisticServiceImplementation()
         
         showLoadingIndicator()
-        activityIndicator.hidesWhenStopped = true
         
         questionFactory?.loadData()
         
@@ -58,11 +57,31 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         }
     }
     
+    func didLoadDataFromServer() {
+        hideLoadingIndicator()
+        questionFactory?.requestNextQuestion()
+    }
+    
+    func didFailToLoadData(with error: Error) {
+        if let apiError = error as? ApiError {
+            errorManager.handleApiError(apiError)
+        } else {
+            showNetworkError(message: error.localizedDescription)
+        }
+        hideLoadingIndicator()
+    }
+    
     override var preferredStatusBarStyle: UIStatusBarStyle{
         return .lightContent //меняем цвет status bara,  так же в info добавил ключ
     }
     
-    //actions
+    // MARK: - Actions
+    @IBAction private func yesButtonClicked(_ sender: UIButton) {
+        guard currentQuestion != nil else {
+            return
+        }
+        showAnswerResult(isCorrect: true)}
+    
     @IBAction private func noButtonClicked(_ sender: UIButton) {
         guard currentQuestion != nil else {
             return
@@ -70,19 +89,8 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         showAnswerResult(isCorrect: false)
     }
     
-    @IBAction private func yesButtonClicked(_ sender: UIButton) {
-        guard currentQuestion != nil else {
-            return
-        }
-        showAnswerResult(isCorrect: true)}
-    
-    // метод вывода на экран вопроса, который принимает на вход вью модель вопроса и ничего не возвращает
-    private func show(quiz step: QuizStepViewModel) {
-        imageView.image = step.image
-        questionTextLabel.text = step.question
-        counterLabel.text = step.questionNumber
-    }
-    
+    // MARK: - Private functions
+   
     // приватный метод конвертации, который принимает моковый вопрос и возвращает вью модель для главного экрана
     private func convert(model: QuizQuestion) -> QuizStepViewModel {
         return QuizStepViewModel(
@@ -90,21 +98,35 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
             question: model.text, //забираем уже готовый вопрос из мокового вопроса
             questionNumber: "\(currentQuestionIndex + 1)/\(questionsAmount)") //Высчитываем номер вопроса с помощью переменной текущего вопроса currentQuestionIndex
     }
-    
-    private func showNextQuestionOrResults() {
-        enableButtons(false) //выкл.
-        
-        if currentQuestionIndex == questionsAmount {
-            // идём в состояние Результат квиза
-            statisticService.store(correct: correctAnswers, total: questionsAmount) //вызываем статистику
-            alertResults(correctAnswers: correctAnswers, questionAmount: questionsAmount)
-        } else {
-//            showLoadingIndicator() 
-            self.questionFactory?.requestNextQuestion()
-            enableButtons(true) //включаю кнопку
-        }
+    // метод вывода на экран вопроса, который принимает на вход вью модель вопроса
+    private func show(quiz step: QuizStepViewModel) {
+        imageView.image = step.image
+        questionTextLabel.text = step.question
+        counterLabel.text = step.questionNumber
     }
     
+    private func alertResults(correctAnswers: Int, questionAmount: Int) {
+        let averageAccurancyString = String(format: "%.2f", statisticService.totalAccuracy)
+        let bestGame = statisticService.bestGame
+        let message = """
+            Ваш результат: \(correctAnswers)/\(questionsAmount)
+            Количество завершённых игр: \(statisticService.gamesCount)
+            Рекорд: \(bestGame.correct)/\(bestGame.total) \((bestGame.date.dateTimeString))
+            Средняя точность: \(averageAccurancyString)%
+            """
+        
+        let alertModel = AlertModel(
+            title: "Этот раунд окончен!",
+            message: message,
+            buttonText: "Сыграть ещё раз",
+            competion: { [weak self] in // замыкания на кнопку рестарт
+                self?.restartRound()
+            }
+        )
+        let alertPresenter = AlertPresenter(presentingViewController: self, alertIdentifier: "Game Results")
+        alertPresenter.presentAlert(model: alertModel)
+        
+    }
     
     // приватный метод, который меняет цвет рамки
     private func showAnswerResult(isCorrect: Bool) {
@@ -138,27 +160,18 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         }
     }
     
-    private func alertResults(correctAnswers: Int, questionAmount: Int) {
-        let averageAccurancyString = String(format: "%.2f", statisticService.totalAccuracy)
-        let bestGame = statisticService.bestGame
-        let message = """
-            Ваш результат: \(correctAnswers)/\(questionsAmount)
-            Количество завершённых игр: \(statisticService.gamesCount)
-            Рекорд: \(bestGame.correct)/\(bestGame.total) \((bestGame.date.dateTimeString))
-            Средняя точность: \(averageAccurancyString)%
-            """
+    private func showNextQuestionOrResults() {
+        enableButtons(false) //выкл.
         
-        let alertModel = AlertModel(
-            title: "Этот раунд окончен!",
-            message: message,
-            buttonText: "Сыграть ещё раз",
-            competion: { [weak self] in // замыкания на кнопку рестарт
-                self?.restartRound()
-            }
-        )
-        let alertPresenter = AlertPresenter(presentingViewController: self, alertIdentifier: "Game Results")
-        alertPresenter.presentAlert(model: alertModel)
-        
+        if currentQuestionIndex == questionsAmount {
+            // идём в состояние Результат квиза
+            statisticService.store(correct: correctAnswers, total: questionsAmount) //вызываем статистику
+            alertResults(correctAnswers: correctAnswers, questionAmount: questionsAmount)
+        } else {
+//            showLoadingIndicator() 
+            self.questionFactory?.requestNextQuestion()
+            enableButtons(true) //включаю кнопку
+        }
     }
     
    private func restartRound() {
@@ -175,11 +188,12 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     }
     
     private func showLoadingIndicator() {
-        activityIndicator.startAnimating()
+        activityIndicator.isHidden = false // говорим, что индикатор загрузки не скрыт
+        activityIndicator.startAnimating() // включаем анимацию
     }
     
     private func hideLoadingIndicator() {
-        activityIndicator.stopAnimating()
+        activityIndicator.isHidden = true // скрываем индикатор загрузки
      }
     
     private func showNetworkError(message: String) {
@@ -200,19 +214,6 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         alertPresenter?.presentAlert(model: modelError)
     }
     
-    func didLoadDataFromServer() {
-        hideLoadingIndicator()
-        questionFactory?.requestNextQuestion()
-    }
-    
-    func didFailToLoadData(with error: Error) {
-        if let apiError = error as? ApiError {
-            errorManager.handleApiError(apiError)
-        } else {
-            showNetworkError(message: error.localizedDescription)
-        }
-        hideLoadingIndicator()
-    }
 }
 
 
