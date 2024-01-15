@@ -35,7 +35,6 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         
         alertPresenter = AlertPresenter(presentingViewController: self)
 
-        
         questionFactory = QuestionFactory(moviesLoader: MoviesLoader(), delegate: self)
         statisticService = StatisticServiceImplementation()
         
@@ -194,13 +193,6 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
                 
                 self.currentQuestionIndex = 0
                 self.correctAnswers = 0
-                
-//                DispatchQueue.main.async {
-//                    self.currentQuestion = nil
-//                    self.imageView.image = nil
-//                    self.questionTextLabel.text = ""
-//                    self.counterLabel.text = ""
-//                }
                 
                 showLoadingIndicator()
                 self.questionFactory?.loadData() //кидаю новый запрос при востановлении сети
