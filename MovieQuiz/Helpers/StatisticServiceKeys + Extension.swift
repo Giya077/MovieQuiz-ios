@@ -7,8 +7,8 @@
 
 import Foundation
 
-extension StatisticServiceImplementation {
-    enum Keys: String {
-        case correct, total, bestGame, gamesCount
-    }
-}
+//extension StatisticServiceImplementation {
+//    enum Keys: String {
+//        case correct, total, bestGame, gamesCount
+//    }
+//}

@@ -16,8 +16,8 @@ class AlertPresenter {
         self.alertIdentifier = alertIdentifier
     }
     
-    func presentAlert(model: AlertModel) {
-        let alertController = UIAlertController(
+    func show(in vc: UIViewController, model: AlertModel) {
+        let alert = UIAlertController(
             title: model.title,
             message: model.message,
             preferredStyle: .alert)
@@ -25,10 +25,9 @@ class AlertPresenter {
         let action = UIAlertAction(title: model.buttonText, style: .default) { _ in
             model.competion()
         }
-        alertController.addAction(action)
-        
-        presentingViewController?.present(alertController, animated: true, completion: nil)
-            alertController.view.accessibilityIdentifier = self.alertIdentifier
+        alert.addAction(action)
+        vc.present(alert, animated: true, completion: nil)
+        alert.view.accessibilityIdentifier = self.alertIdentifier
         
     }
 
