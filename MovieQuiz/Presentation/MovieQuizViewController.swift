@@ -10,7 +10,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     private var isProcessinqQuestion = false //флаг по обработке след. вопроса для блок. и разблк. кнопки
     
     private var questionFactory: QuestionFactoryProtocol?
-    private var currentQuestion: QuizQuestion?
+//    private var currentQuestion: QuizQuestion?
     private var alertPresenter: AlertPresenter? // alert injection
     
     private var errorManager = ErrorManager()
@@ -39,7 +39,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         statisticService = StatisticServiceImplementation()
         
         showLoadingIndicator()
-        
+        presenter.viewController = self
         questionFactory?.loadData()
         
         errorManager.showNetworkError = { [weak self] message in
@@ -47,14 +47,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     }
     // MARK: - QuestionFactoryDelegate
     func didReceiveNextQuestion(question: QuizQuestion?) {
-        guard let question = question else {
-            return
-        }
-        currentQuestion = question
-        let viewModel = presenter.convert(model: question)
-        DispatchQueue.main.async { [weak self] in
-            self?.show(quiz: viewModel)
-        }
+        presenter.didReceiveNextQuestion(question: question)
     }
     
     func didLoadDataFromServer() {
@@ -77,23 +70,17 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     
     // MARK: - Actions
     @IBAction private func yesButtonClicked(_ sender: UIButton) {
-        guard currentQuestion != nil else {
-            return
-        }
-        showAnswerResult(isCorrect: true)}
-    
+        presenter.yesButtonClicked()
+    }
     @IBAction private func noButtonClicked(_ sender: UIButton) {
-        guard currentQuestion != nil else {
-            return
-        }
-        showAnswerResult(isCorrect: false)
+        presenter.noButtonClicked()
     }
     
     // MARK: - Private functions
    
 
     // метод вывода на экран вопроса, который принимает на вход вью модель вопроса
-    private func show(quiz step: QuizStepViewModel) {
+     func show(quiz step: QuizStepViewModel) {
         imageView.image = step.image
         questionTextLabel.text = step.question
         counterLabel.text = step.questionNumber
@@ -123,14 +110,14 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     }
     
     // приватный метод, который меняет цвет рамки
-    private func showAnswerResult(isCorrect: Bool) {
+    func showAnswerResult(isCorrect: Bool) {
         guard !isProcessinqQuestion else {
             return
         }
         
         isProcessinqQuestion = true //флаг
         
-        guard let currentQuestion = currentQuestion else {
+        guard let currentQuestion = presenter.currentQuestion else {
             return
         }
         
