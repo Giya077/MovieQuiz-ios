@@ -11,8 +11,8 @@ final class MovieQuizViewController: UIViewController {
     @IBOutlet weak var activityIndicator: UIActivityIndicatorView!
     
     //Properties
-    private var statisticService: StatisticService? // Экземпляр для работы с данными и статистикой
-    private var isProcessinqQuestion = false //флаг по обработке след. вопроса для блок. и разблк. кнопки
+    private var statisticService: StatisticService?
+    var isProcessinqQuestion = false //флаг по обработке след. вопроса для блок. и разблк. кнопки
     private var alertPresenter: AlertPresenter? // alert injection
     private var errorManager = ErrorManager()
     private var presenter: MovieQuizPresenter!
@@ -25,14 +25,12 @@ final class MovieQuizViewController: UIViewController {
         
         presenter = MovieQuizPresenter(viewController: self)
         alertPresenter = AlertPresenter(presentingViewController: self)
-        presenter.viewController = self
-        
-        statisticService = StatisticServiceImplementation()
-
         showLoadingIndicator()
         
-        errorManager.showNetworkError = { [weak self] message in
-            self?.showNetworkError(message: message)}
+//        presenter.viewController = self
+//        statisticService = StatisticServiceImplementation()
+//        errorManager.showNetworkError = { [weak self] message in
+//        self?.showNetworkError(message: message)}
     }
     
     override var preferredStatusBarStyle: UIStatusBarStyle{
@@ -51,87 +49,34 @@ final class MovieQuizViewController: UIViewController {
    
     // метод вывода на экран вопроса, который принимает на вход вью модель вопроса
      func show(quiz step: QuizStepViewModel) {
+        imageView.layer.borderColor = UIColor.clear.cgColor
         imageView.image = step.image
         questionTextLabel.text = step.question
         counterLabel.text = step.questionNumber
     }
     
     func show(quiz result: QuizResultsViewModel) {
-        var message = result.text
-        if let statisticService = statisticService {
-            statisticService.store(correct: presenter.correctAnswers, total: presenter.questionsAmount)
+        let message = presenter.makeResultsMessage()
 
-            let bestGame = statisticService.bestGame
-
-            let totalPlaysCountLine = "Количество сыгранных квизов: \(statisticService.gamesCount)"
-            let currentGameResultLine = "Ваш результат: \(presenter.correctAnswers)\\\(presenter.questionsAmount)"
-            let bestGameInfoLine = "Рекорд: \(bestGame.correct)\\\(bestGame.total)"
-            + " (\(bestGame.date.dateTimeString))"
-            let averageAccuracyLine = "Средняя точность: \(String(format: "%.2f", statisticService.totalAccuracy))%"
-
-            let resultMessage = [
-                currentGameResultLine, totalPlaysCountLine, bestGameInfoLine, averageAccuracyLine
-            ].joined(separator: "\n")
-
-            message = resultMessage
-        }
-
-        let model = AlertModel(title: result.title, message: message, buttonText: result.buttonText) { [weak self] in
+        let alert = UIAlertController(
+            title: result.title,
+            message: message,
+            preferredStyle: .alert)
+        
+        let action = UIAlertAction(title: result.buttonText, style: .default) { [weak self] _ in
             guard let self = self else { return }
-
-            presenter.resetQuestionIndex()
+            
             self.presenter.restartGame()
         }
-
-        alertPresenter?.show(in: self, model: model)
+        alert.addAction(action)
+        self.present(alert, animated: true, completion: nil)
     }
     
-    // приватный метод, который меняет цвет рамки
-    func showAnswerResult(isCorrect: Bool) {
-        guard !isProcessinqQuestion else {
-            return
-        }
-
-        isProcessinqQuestion = true //флаг
-                
-        if isCorrect {
-            presenter.correctAnswers += 1
-        }
-
+    func highlightImageBorder(isCorrectAnswer: Bool) {
         imageView.layer.masksToBounds = true
         imageView.layer.borderWidth = 8
-        imageView.layer.borderColor = isCorrect ? UIColor.ypGreen.cgColor : UIColor.ypRed.cgColor
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-            guard let self = self else { return }
-            imageView.layer.borderColor = UIColor.clear.cgColor
-            self.presenter.correctAnswers = presenter.correctAnswers
-            self.presenter.showNextQuestionOrResults()
-            self.isProcessinqQuestion = false // возращаю кнопку в исходное значение
-        }
+        imageView.layer.borderColor = isCorrectAnswer ? UIColor.ypGreen.cgColor : UIColor.ypRed.cgColor
     }
-    
-//    private func showNextQuestionOrResults() {
-//        enableButtons(false) //выкл.
-//        
-//        if presenter.isLastQuestion() {
-//            // идём в состояние Результат квиза
-//            statisticService.store(correct: correctAnswers, total: presenter.questionsAmount) //вызываем статистику
-//            alertResults(correctAnswers: correctAnswers, questionAmount: presenter.questionsAmount)
-//        } else {
-//            presenter.switchToNextQuestion() // ?
-//            questionFactory?.requestNextQuestion() // ?
-//            enableButtons(true) //включаю кнопку
-//        }
-//    }
-    
-//   private func restartRound() {
-//       presenter.resetQuestionIndex()
-//       presenter.correctAnswers = 0
-//        enableButtons(true)
-//        questionFactory?.requestNextQuestion()
-//    }
-    
     
     func enableButtons(_ enable: Bool) { //метод вкл,откл кнопок
         noButton.isEnabled = enable
@@ -148,17 +93,18 @@ final class MovieQuizViewController: UIViewController {
      }
     
     func showNetworkError(message: String) {
-        hideLoadingIndicator()
+        imageView.layer.borderColor = UIColor.clear.cgColor
+        showLoadingIndicator()
+        enableButtons(false)
+        
         
         let modelError = AlertModel(
             title: "Ошибка",
             message: message,
             buttonText: "Попробовать еще раз") { [weak self] in
                 guard let self = self else { return }
-                
-//                self.presenter.resetQuestionIndex()
+            
                 self.presenter.restartGame()
-//                self.presenter.didLoadDataFromServer() //кидаю новый запрос при восстановлении сети
         }
         
         alertPresenter?.show(in: self, model: modelError)
