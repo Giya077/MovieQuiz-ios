@@ -63,13 +63,21 @@ final class MovieQuizViewController: UIViewController {
             message: message,
             preferredStyle: .alert)
         
-        let action = UIAlertAction(title: result.buttonText, style: .default) { [weak self] _ in
+        let action = UIAlertAction(
+            title: result.buttonText,
+            style: .default) { [weak self] _ in
             guard let self = self else { return }
             
             self.presenter.restartGame()
         }
+        alert.view.accessibilityIdentifier = "GameResultsAlert"
+        
         alert.addAction(action)
+        
+        alertPresenter?.alertIdentifier = "Game Results"
+        
         self.present(alert, animated: true, completion: nil)
+
     }
     
     func highlightImageBorder(isCorrectAnswer: Bool) {

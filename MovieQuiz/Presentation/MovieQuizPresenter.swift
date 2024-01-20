@@ -19,9 +19,6 @@ final class MovieQuizPresenter: QuestionFactoryDelegate {
     private var currentQuestion: QuizQuestion?
     private var errorManager: ErrorManager?
     
-
-    
-    
     init(viewController: MovieQuizViewController) {
         self.viewController = viewController
         
@@ -127,6 +124,7 @@ final class MovieQuizPresenter: QuestionFactoryDelegate {
         }
     }
     
+    
     func proceedToNextQuestionOrResults() {
         viewController?.enableButtons(true)
         
@@ -140,7 +138,8 @@ final class MovieQuizPresenter: QuestionFactoryDelegate {
                     text: text,
                     buttonText: "Сыграть ещё раз")
                     viewController?.show(quiz: viewModel)
-            } else {
+            } 
+        else {
                 self.switchToNextQuestion()
                 questionFactory?.requestNextQuestion()
             }

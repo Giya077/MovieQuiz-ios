@@ -28,7 +28,6 @@ class AlertPresenter {
         alert.addAction(action)
         vc.present(alert, animated: true, completion: nil)
         alert.view.accessibilityIdentifier = self.alertIdentifier
-        
     }
 
 }
