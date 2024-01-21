@@ -10,7 +10,7 @@ import UIKit
 
 final class MovieQuizPresenter: QuestionFactoryDelegate {
    private let statisticService: StatisticService!
-   weak var viewController: MovieQuizViewController?
+    weak var viewController: (MovieQuizViewControllerProtocol)?
    private var questionFactory: QuestionFactoryProtocol?
    
     private let questionsAmount: Int = 10
@@ -19,7 +19,7 @@ final class MovieQuizPresenter: QuestionFactoryDelegate {
     private var currentQuestion: QuizQuestion?
     private var errorManager: ErrorManager?
     
-    init(viewController: MovieQuizViewController) {
+    init(viewController: MovieQuizViewControllerProtocol) {
         self.viewController = viewController
         
         statisticService = StatisticServiceImplementation()
@@ -45,7 +45,6 @@ final class MovieQuizPresenter: QuestionFactoryDelegate {
         } else {
             viewController?.showNetworkError(message: error.localizedDescription)
         }
-        viewController?.hideLoadingIndicator()
     }
     
     
@@ -76,6 +75,7 @@ final class MovieQuizPresenter: QuestionFactoryDelegate {
         correctAnswers = 0
         questionFactory?.requestNextQuestion()
         viewController?.enableButtons(true)
+        viewController?.hideLoadingIndicator()
     }
     
     func switchToNextQuestion() {
@@ -104,26 +104,19 @@ final class MovieQuizPresenter: QuestionFactoryDelegate {
         }
         let givenAnswer = isYes
         proceedWithAnswer(isCorrect: givenAnswer == currentQuestion.correctAnswer)
+        viewController?.enableButtons(false)
     }
     
     func proceedWithAnswer(isCorrect: Bool) {
-        guard !viewController!.isProcessinqQuestion else {
-                    return
-                }
-        viewController?.isProcessinqQuestion = true //флаг обработки кнопки
-        
+        viewController?.enableButtons(true)
         didAnswer(isCorrectAnswer: isCorrect)
-        
         viewController?.highlightImageBorder(isCorrectAnswer: isCorrect)
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
             guard let self = self else { return }
-//            viewController?.imageView.layer.borderColor = UIColor.clear.cgColor
             self.proceedToNextQuestionOrResults()
-            self.viewController?.isProcessinqQuestion = false
         }
     }
-    
     
     func proceedToNextQuestionOrResults() {
         viewController?.enableButtons(true)

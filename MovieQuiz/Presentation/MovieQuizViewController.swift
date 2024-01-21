@@ -1,7 +1,7 @@
 import UIKit
 
 
-final class MovieQuizViewController: UIViewController {
+final class MovieQuizViewController: UIViewController, MovieQuizViewControllerProtocol {
     //outlets
     @IBOutlet weak private var imageView: UIImageView!
     @IBOutlet weak private var questionTextLabel: UILabel!
@@ -12,11 +12,9 @@ final class MovieQuizViewController: UIViewController {
     
     //Properties
     private var statisticService: StatisticService?
-    var isProcessinqQuestion = false //флаг по обработке след. вопроса для блок. и разблк. кнопки
     private var alertPresenter: AlertPresenter? // alert injection
     private var errorManager = ErrorManager()
     private var presenter: MovieQuizPresenter!
-    
     
     // MARK: - Lifecycle
     override func viewDidLoad() {
@@ -26,11 +24,6 @@ final class MovieQuizViewController: UIViewController {
         presenter = MovieQuizPresenter(viewController: self)
         alertPresenter = AlertPresenter(presentingViewController: self)
         showLoadingIndicator()
-        
-//        presenter.viewController = self
-//        statisticService = StatisticServiceImplementation()
-//        errorManager.showNetworkError = { [weak self] message in
-//        self?.showNetworkError(message: message)}
     }
     
     override var preferredStatusBarStyle: UIStatusBarStyle{
@@ -71,13 +64,8 @@ final class MovieQuizViewController: UIViewController {
             self.presenter.restartGame()
         }
         alert.view.accessibilityIdentifier = "GameResultsAlert"
-        
         alert.addAction(action)
-        
-        alertPresenter?.alertIdentifier = "Game Results"
-        
         self.present(alert, animated: true, completion: nil)
-
     }
     
     func highlightImageBorder(isCorrectAnswer: Bool) {
@@ -86,13 +74,13 @@ final class MovieQuizViewController: UIViewController {
         imageView.layer.borderColor = isCorrectAnswer ? UIColor.ypGreen.cgColor : UIColor.ypRed.cgColor
     }
     
-    func enableButtons(_ enable: Bool) { //метод вкл,откл кнопок
+    func enableButtons(_ enable: Bool) {
         noButton.isEnabled = enable
         yesButton.isEnabled = enable
     }
     
      func showLoadingIndicator() {
-        activityIndicator.isHidden = false // говорим, что индикатор загрузки не скрыт
+        activityIndicator.isHidden = false // индикатор загрузки не скрыт
         activityIndicator.startAnimating() // включаем анимацию
     }
     
@@ -105,7 +93,6 @@ final class MovieQuizViewController: UIViewController {
         showLoadingIndicator()
         enableButtons(false)
         
-        
         let modelError = AlertModel(
             title: "Ошибка",
             message: message,
@@ -114,7 +101,6 @@ final class MovieQuizViewController: UIViewController {
             
                 self.presenter.restartGame()
         }
-        
         alertPresenter?.show(in: self, model: modelError)
     }
 }
