@@ -12,6 +12,7 @@ enum ApiError: Error {
     case requestsLimitExceeded
     case unexpectedResponse
 }
+
 class ErrorManager {
     var showNetworkError: ((String) -> Void)?
     
