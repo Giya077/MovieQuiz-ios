@@ -10,7 +10,6 @@ import UIKit
 
 final class MovieQuizPresenter: QuestionFactoryDelegate {
    private let statisticService: StatisticService!
-    weak var viewController: (MovieQuizViewControllerProtocol)?
    private var questionFactory: QuestionFactoryProtocol?
    
     private let questionsAmount: Int = 10
@@ -30,7 +29,8 @@ final class MovieQuizPresenter: QuestionFactoryDelegate {
         errorManager = ErrorManager()
         
     }
-
+    
+    weak var viewController: (MovieQuizViewControllerProtocol)?
     
     // MARK: - QuestionFactoryDelegate
  
@@ -47,7 +47,6 @@ final class MovieQuizPresenter: QuestionFactoryDelegate {
         }
     }
     
-    
     func didReceiveNextQuestion(question: QuizQuestion?) {
         guard let question = question else {
             return
@@ -61,13 +60,6 @@ final class MovieQuizPresenter: QuestionFactoryDelegate {
     
     func isLastQuestion() -> Bool {
         currentQuestionIndex == questionsAmount - 1 // ?
-    }
-    
-    private func didAnswer(isCorrectAnswer: Bool) {
-        if isCorrectAnswer{
-            correctAnswers += 1
-        }
-
     }
     
     func restartGame() {
@@ -98,26 +90,6 @@ final class MovieQuizPresenter: QuestionFactoryDelegate {
         didAnswer(isYes: false)
     }
     
-    private func didAnswer(isYes: Bool) {
-        guard let currentQuestion = currentQuestion else {
-            return
-        }
-        let givenAnswer = isYes
-        proceedWithAnswer(isCorrect: givenAnswer == currentQuestion.correctAnswer)
-        viewController?.enableButtons(false)
-    }
-    
-    func proceedWithAnswer(isCorrect: Bool) {
-        viewController?.enableButtons(true)
-        didAnswer(isCorrectAnswer: isCorrect)
-        viewController?.highlightImageBorder(isCorrectAnswer: isCorrect)
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-            guard let self = self else { return }
-            self.proceedToNextQuestionOrResults()
-        }
-    }
-    
     func proceedToNextQuestionOrResults() {
         viewController?.enableButtons(true)
         
@@ -131,7 +103,7 @@ final class MovieQuizPresenter: QuestionFactoryDelegate {
                     text: text,
                     buttonText: "Сыграть ещё раз")
                     viewController?.show(quiz: viewModel)
-            } 
+            }
         else {
                 self.switchToNextQuestion()
                 questionFactory?.requestNextQuestion()
@@ -155,4 +127,31 @@ final class MovieQuizPresenter: QuestionFactoryDelegate {
         
                     return resultMessage
     }
+    
+    func proceedWithAnswer(isCorrect: Bool) {
+        viewController?.enableButtons(true)
+        didAnswer(isCorrectAnswer: isCorrect)
+        viewController?.highlightImageBorder(isCorrectAnswer: isCorrect)
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            guard let self = self else { return }
+            self.proceedToNextQuestionOrResults()
+        }
+    }
+    
+    private func didAnswer(isYes: Bool) {
+        guard let currentQuestion = currentQuestion else {
+            return
+        }
+        let givenAnswer = isYes
+        proceedWithAnswer(isCorrect: givenAnswer == currentQuestion.correctAnswer)
+        viewController?.enableButtons(false)
+    }
+    
+    private func didAnswer(isCorrectAnswer: Bool) {
+        if isCorrectAnswer{
+            correctAnswers += 1
+        }
+    }
+    
 }
